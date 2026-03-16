@@ -200,6 +200,7 @@ serve(async (req) => {
 
     // Generate and upload PDF
     let pdfUrl: string | null = null;
+    let pdfDebugError: string | null = null; // TODO: remove after debugging
     try {
       const pdfDoc = await PDFDocument.create();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -277,6 +278,7 @@ serve(async (req) => {
 
       if (uploadError) {
         console.error("PDF upload error:", uploadError);
+        pdfDebugError = `upload: ${uploadError.message}`;
       } else {
         const { data: urlData } = supabaseAdmin.storage
           .from("quiz-pdfs")
@@ -293,11 +295,13 @@ serve(async (req) => {
         }
       }
     } catch (pdfErr) {
-      console.error("PDF generation error:", pdfErr);
+      const msg = pdfErr instanceof Error ? `${pdfErr.name}: ${pdfErr.message}` : String(pdfErr);
+      console.error("PDF generation error:", msg);
+      pdfDebugError = `exception: ${msg}`;
     }
 
     return new Response(
-      JSON.stringify({ success: true, lead_id: data.id, pdf_url: pdfUrl }),
+      JSON.stringify({ success: true, lead_id: data.id, pdf_url: pdfUrl, _pdf_error: pdfDebugError }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
